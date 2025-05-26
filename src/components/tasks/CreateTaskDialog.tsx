@@ -38,7 +38,7 @@ import { cn } from '@/lib/utils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { toast } from '@/hooks/use-toast';
+import { useCreateTask } from '@/hooks/useTasks';
 
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -57,6 +57,8 @@ interface CreateTaskDialogProps {
 }
 
 export function CreateTaskDialog({ open, onOpenChange }: CreateTaskDialogProps) {
+  const createTaskMutation = useCreateTask();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -68,14 +70,22 @@ export function CreateTaskDialog({ open, onOpenChange }: CreateTaskDialogProps) 
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log('Creating task:', values);
-    toast({
-      title: 'Task created successfully',
-      description: `"${values.title}" has been assigned to ${values.assignedTo}`,
-    });
-    form.reset();
-    onOpenChange(false);
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      await createTaskMutation.mutateAsync({
+        title: values.title,
+        description: values.description,
+        category: values.category,
+        priority: values.priority,
+        assignedTo: values.assignedTo,
+        dueDate: values.dueDate.toISOString(),
+      });
+      form.reset();
+      onOpenChange(false);
+    } catch (error) {
+      // Error handling is done in the mutation
+      console.error('Failed to create task:', error);
+    }
   };
 
   // Mock team members
@@ -118,7 +128,7 @@ export function CreateTaskDialog({ open, onOpenChange }: CreateTaskDialogProps) 
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Describe the task in detail..."
                       className="resize-none"
                       rows={3}
@@ -250,7 +260,9 @@ export function CreateTaskDialog({ open, onOpenChange }: CreateTaskDialogProps) 
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Create Task</Button>
+              <Button type="submit" disabled={createTaskMutation.isPending}>
+                {createTaskMutation.isPending ? 'Creating...' : 'Create Task'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

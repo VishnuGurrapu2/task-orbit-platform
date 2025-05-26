@@ -1,5 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authAPI } from '@/lib/api';
+import { toast } from '@/hooks/use-toast';
 
 export interface User {
   id: string;
@@ -22,6 +24,7 @@ interface AuthContextType {
   organization: Organization | null;
   organizations: Organization[];
   login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, role: string, orgName: string) => Promise<void>;
   logout: () => void;
   switchOrganization: (orgId: string) => void;
   isLoading: boolean;
@@ -45,24 +48,87 @@ const mockOrganizations: Organization[] = [
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(mockUser);
+  const [user, setUser] = useState<User | null>(null);
   const [organizations] = useState<Organization[]>(mockOrganizations);
   const [currentOrgId, setCurrentOrgId] = useState('1');
   const [isLoading, setIsLoading] = useState(false);
 
   const organization = organizations.find(org => org.id === currentOrgId) || null;
 
+  // Check for existing token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      // In a real app, you'd validate the token with the backend
+      // For now, we'll set the mock user if token exists
+      setUser(mockUser);
+    }
+  }, []);
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    // Mock login - replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setUser(mockUser);
-    setIsLoading(false);
+    try {
+      const response = await authAPI.login(email, password);
+      const { token } = response;
+
+      // Store token
+      localStorage.setItem('authToken', token);
+
+      // Set user (in real app, you'd decode token or fetch user data)
+      setUser(mockUser);
+
+      toast({
+        title: 'Login successful',
+        description: 'Welcome back!',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Login failed',
+        description: error.response?.data?.error || 'An error occurred during login',
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (email: string, password: string, role: string, orgName: string) => {
+    setIsLoading(true);
+    try {
+      const response = await authAPI.register(email, password, role, orgName);
+      const { token } = response;
+
+      // Store token
+      localStorage.setItem('authToken', token);
+
+      // Set user (in real app, you'd decode token or fetch user data)
+      setUser(mockUser);
+
+      toast({
+        title: 'Registration successful',
+        description: 'Welcome to TaskOrbit!',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Registration failed',
+        description: error.response?.data?.error || 'An error occurred during registration',
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {
+    localStorage.removeItem('authToken');
     setUser(null);
     setCurrentOrgId('');
+    toast({
+      title: 'Logged out',
+      description: 'You have been successfully logged out.',
+    });
   };
 
   const switchOrganization = (orgId: string) => {
@@ -76,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       organization,
       organizations,
       login,
+      register,
       logout,
       switchOrganization,
       isLoading

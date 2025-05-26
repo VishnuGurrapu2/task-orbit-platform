@@ -1,11 +1,16 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Users, Calendar, BarChart3, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { LoginDialog } from '@/components/auth/LoginDialog';
+import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
+  const { user } = useAuth();
+  const [loginOpen, setLoginOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header */}
@@ -20,10 +25,20 @@ const Index = () => {
           <div className="flex items-center gap-4">
             <Button variant="ghost">Features</Button>
             <Button variant="ghost">Pricing</Button>
-            <Button variant="outline">Login</Button>
-            <Button asChild>
-              <Link to="/dashboard">Get Started</Link>
-            </Button>
+            {user ? (
+              <Button asChild>
+                <Link to="/dashboard">Dashboard</Link>
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setLoginOpen(true)}>
+                  Login
+                </Button>
+                <Button asChild>
+                  <Link to="/dashboard">Get Started</Link>
+                </Button>
+              </>
+            )}
           </div>
         </nav>
       </header>
@@ -35,7 +50,7 @@ const Index = () => {
             Multi-Tenant Task Management
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Organize your teams, manage projects, and track progress across multiple organizations 
+            Organize your teams, manage projects, and track progress across multiple organizations
             with role-based access control and real-time collaboration.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
@@ -102,7 +117,7 @@ const Index = () => {
               Experience the power of organized team collaboration
             </p>
           </div>
-          
+
           <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl p-8 text-center">
             <div className="bg-white rounded-lg p-6 inline-block">
               <CheckCircle className="h-16 w-16 text-blue-600 mx-auto mb-4" />
@@ -151,6 +166,8 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 };

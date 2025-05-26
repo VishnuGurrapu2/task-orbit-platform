@@ -3,20 +3,18 @@ import React, { useState } from 'react';
 import { TaskColumn } from './TaskColumn';
 import { TaskFilters } from './TaskFilters';
 import { Card } from '@/components/ui/card';
+import { useTasks } from '@/hooks/useTasks';
+import { Loader2 } from 'lucide-react';
 
 export interface Task {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   category: 'Bug' | 'Feature' | 'Improvement';
   priority: 'Low' | 'Medium' | 'High';
-  status: 'Todo' | 'In Progress' | 'Completed' | 'Expired';
-  dueDate: string;
-  assignedTo: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
+  status: 'To Do' | 'In Progress' | 'Done';
+  dueDate?: string;
+  assignedTo: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -62,32 +60,51 @@ const mockTasks: Task[] = [
 ];
 
 export function TaskBoard() {
-  const [tasks] = useState<Task[]>(mockTasks);
+  const { data: tasks = [], isLoading, error } = useTasks();
   const [filters, setFilters] = useState({
     category: 'All',
     priority: 'All',
     assignedTo: 'All'
   });
 
-  const filteredTasks = tasks.filter(task => {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading tasks...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Card className="p-6">
+          <p className="text-red-600">Failed to load tasks. Please try again.</p>
+        </Card>
+      </div>
+    );
+  }
+
+  const filteredTasks = tasks.filter((task: Task) => {
     if (filters.category !== 'All' && task.category !== filters.category) return false;
     if (filters.priority !== 'All' && task.priority !== filters.priority) return false;
     return true;
   });
 
   const getTasksByStatus = (status: Task['status']) => {
-    return filteredTasks.filter(task => task.status === status);
+    return filteredTasks.filter((task: Task) => task.status === status);
   };
 
   return (
     <div className="space-y-6">
       <TaskFilters filters={filters} onFiltersChange={setFilters} />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <TaskColumn
-          title="Todo"
-          status="Todo"
-          tasks={getTasksByStatus('Todo')}
+          title="To Do"
+          status="To Do"
+          tasks={getTasksByStatus('To Do')}
           className="bg-slate-50"
         />
         <TaskColumn
@@ -97,16 +114,10 @@ export function TaskBoard() {
           className="bg-blue-50"
         />
         <TaskColumn
-          title="Completed"
-          status="Completed"
-          tasks={getTasksByStatus('Completed')}
+          title="Done"
+          status="Done"
+          tasks={getTasksByStatus('Done')}
           className="bg-green-50"
-        />
-        <TaskColumn
-          title="Expired"
-          status="Expired"
-          tasks={getTasksByStatus('Expired')}
-          className="bg-red-50"
         />
       </div>
     </div>
